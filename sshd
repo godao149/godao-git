@@ -1,0 +1,105 @@
+#!/bin/bash
+# Begin sshd
+#
+# Description : Start sshd daemon
+#
+# Author      : godao149	mario.fernandes149@gmail.com
+#
+# Version     : 1.0
+#
+########################################################################
+
+### BEGIN INIT INFO
+# Provides:            sshd
+# Required-Start:      $network
+# Should-Start:
+# Required-Stop:       sendsignals
+# Should-Stop:
+# Default-Start:       3 4 5
+# Default-Stop:        0 1 2 6
+# Short-Description:   Starts sshd daemon.
+# Description:         Starts sshd daemon.
+### END INIT INFO
+#$Date: 2013-01-21 1:10:28 +0000 (TUE, 20 JAN 2014) $
+
+. /lib/lsb/init-functions
+
+ENV="env -i PATH=/usr/local/bin:/usr/bin:/usr/sbin"
+SSHD_CONFDIR=/etc/ssh
+SSHD_CONF=$SSH_CONFDIR/sshd.conf
+SSHD=/usr/sbin/sshd
+export SSHD_CONF SSHD_CONFDIR  
+
+if [ "$SSHD" != /usr/sbin/sshd ] ; then
+	ENV="$SSHD SSHD=$SSHD"
+fi
+if [ "$SSHD_CONFDIR" != /etc/ssh ] ; then
+	ENV="$ENV SSHD_CONFDIR=$SSHD_CONFDIR"
+fi
+if [ "$SSHD_CONF" != $SSHD_CONFDIR\sshd.conf ] ; then
+	ENV="$ENV SSHD_CONF=$SSHD_CONF"
+fi
+
+case "$1" in
+    start)
+        log_daemon_msg "Starting SSH Server..."
+     if  start_daemon -f "$SSHD" ; then
+        sleep 1
+        pid=`cat /run/sshd.pid 2>/dev/null`
+        echo "-16" >/proc/${pid}/oom_score_adj
+        log_end_msg 0
+	exit 0
+else
+	log_end_msg 1
+	exit 1
+fi
+	;;
+	
+    stop)
+        log_daemon_msg "Stopping SSH Server..."
+       if killproc -p "/run/sshd.pid" $SSHD ; then
+        log_end_msg 0
+	exit 0
+else
+	log_end_msg 1
+	exit 1
+fi
+	;;
+    reload)
+        log_daemon_msg "Reloading SSH Server..."
+        
+	pid=`cat /run/sshd.pid 2>/dev/null`
+
+        if [ -n "${pid}" ]; then
+           kill -HUP "${pid}"
+	log_end_msg 0
+	exit 0
+        else
+           exit 1
+        fi
+
+        ;;
+
+    restart)
+        $0 stop
+        sleep 1
+        $0 start
+	;;
+
+    status)
+	
+	   if [ -z $(pidof sshd) ] ; then
+		   echo "SSH server disabled"
+	   else
+		   echo "SSH server enabled with PID:$(pidof sshd)"
+	   fi
+
+        ;;
+
+    *)
+        echo "Usage: $0 {start|stop|reload|restart|status}"
+        exit 1
+        ;;
+esac
+
+# End sshd bootscript
